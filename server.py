@@ -5,6 +5,7 @@ from fastapi import HTTPException, Depends, Header
 from fastmcp import FastMCP
 import requests
 import google.generativeai as genai
+from typing import Optional
 
 mcp_server = os.getenv("MOONRAKER_URL", "http://192.168.1.124")
 
@@ -127,6 +128,99 @@ def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -
         return {"error": f"Failed to fetch snapshot: {str(e)}"}
     except Exception as e:
         return {"error": f"Unexpected error: {str(e)}"}
+
+@mcp.tool(description="Get the current status of the job queue")
+def get_job_queue_status(api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        response = requests.get(mcp_server + "/server/job_queue/status")
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return data['result']
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Enqueue one or more jobs to the job queue")
+def enqueue_job(filenames: list[str], reset: bool = False, api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        payload = {"filenames": filenames, "reset": reset}
+        response = requests.post(mcp_server + "/server/job_queue/job", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return data['result']
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Remove one or more jobs from the job queue")
+def remove_job(job_ids: Optional[list[str]] = None, all: bool = False, api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        if all:
+            payload = {"all": True}
+        else:
+            if not job_ids:
+                return {"error": "Either job_ids must be provided or all set to True"}
+            payload = {"job_ids": job_ids}
+        response = requests.delete(mcp_server + "/server/job_queue/job", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return data['result']
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Pause the job queue")
+def pause_job_queue(api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        response = requests.post(mcp_server + "/server/job_queue/pause")
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return data['result']
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Start the job queue")
+def start_job_queue(api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        response = requests.post(mcp_server + "/server/job_queue/start")
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return data['result']
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Jump a job to the front of the queue")
+def jump_job_queue(job_id: str, api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        payload = {"job_id": job_id}
+        response = requests.post(mcp_server + "/server/job_queue/jump", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return data['result']
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

@@ -10,6 +10,12 @@ This is a Model Context Protocol (MCP) server that interfaces with a Moonraker i
 - Pause, resume, cancel print jobs
 - Get print status
 - Return a live webcam view of the printer
+- Get job queue status
+- Enqueue jobs to the queue
+- Remove jobs from the queue
+- Pause the job queue
+- Start the job queue
+- Jump a job to the front of the queue
 
 ## Prerequisites
 

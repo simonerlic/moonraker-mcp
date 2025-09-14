@@ -3,8 +3,7 @@ import os
 import base64
 from fastmcp import FastMCP
 import requests
-from google.generativeai.client import configure
-from google.generativeai.generative_models import GenerativeModel
+import google.generativeai as genai
 from typing import Optional
 
 mcp_server = os.getenv("MOONRAKER_URL", "http://192.168.1.124")
@@ -138,8 +137,8 @@ def analyze_print_via_webcam(prompt: str) -> dict:
         image_data = base64.b64encode(response.content).decode('utf-8')
 
         # Configure Google Generative AI
-        configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = GenerativeModel('models/gemma-3-27b-it')
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel('models/gemma-3-27b-it')
 
         # Generate content with prompt and image
         ai_response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": image_data}])

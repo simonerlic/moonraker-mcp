@@ -1,8 +1,28 @@
-version: "3.8"
-
 services:
-  moonraker-mcp:
-    build: .
-    environment:
-      - MOONRAKER_URL=${MOONRAKER_URL:-http://192.168.1.124}
-    restart: unless-stopped
+    moonraker-mcp:
+        build: .
+        ports:
+            - "8000:8000"
+        environment:
+            - MOONRAKER_URL=${MOONRAKER_URL:-http://192.168.1.124}
+            - API_KEY=${API_KEY:-your_api_key_here}
+            - GOOGLE_API_KEY=${GOOGLE_API_KEY:-your_google_api_key_here}
+        restart: unless-stopped
+        networks:
+            - mcp-network
+
+    cloudflared:
+        image: cloudflare/cloudflared:latest
+        command: tunnel --config /etc/cloudflared/config.yml run
+        volumes:
+            - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+            - ./cloudflared/cert.pem:/etc/cloudflared/cert.pem:ro
+        restart: unless-stopped
+        depends_on:
+            - moonraker-mcp
+        networks:
+            - mcp-network
+
+networks:
+    mcp-network:
+        driver: bridge

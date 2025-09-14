@@ -1,6 +1,6 @@
 # Moonraker MCP Server
 
-This is a Model Context Protocol (MCP) server that interfaces with a Moonraker instance to control a 3D printer. It has been dockerized for robustness and secured with nginx reverse proxy using basic authentication.
+This is a Model Context Protocol (MCP) server that interfaces with a Moonraker instance to control a 3D printer.
 
 ## Features
 
@@ -9,27 +9,12 @@ This is a Model Context Protocol (MCP) server that interfaces with a Moonraker i
 - Firmware restart
 - Pause, resume, cancel print jobs
 - Get print status
-
-## Security
-
-The server is secured with nginx basic authentication. By default, the username is `admin` and password is `securepassword`. **Change these credentials immediately for production use.**
-
-To change the password, regenerate the `.htpasswd` file:
-
-```bash
-htpasswd -bc nginx/.htpasswd yourusername yourpassword
-```
-
-For better security, consider:
-- Using HTTPS (e.g., with Let's Encrypt)
-- Strong passwords
-- Limiting access by IP if possible
-- Ensuring Moonraker itself is secured
+- Return a live webcam view of the printer
 
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- Moonraker instance running (default URL: http://192.168.1.124)
+- Moonraker instance running
 
 ## Setup
 
@@ -40,24 +25,30 @@ For better security, consider:
    export MOONRAKER_URL=http://your-moonraker-ip
    ```
 
-3. Build and run the containers:
+3. (Optional) Set the `API_KEY` environment variable for authentication:
+   ```bash
+   export API_KEY=your-secret-api-key
+   ```
+
+4. Build and run the containers:
    ```bash
    docker-compose up --build
    ```
 
-4. The server will be accessible at `http://localhost` (or your server's IP) on port 80.
+5. The server will be accessible at `http://localhost` (or your server's IP) on port 80.
 
-5. When accessing, provide the basic auth credentials.
+6. When accessing, provide the API key in the X-API-Key header if API_KEY is set.
 
 ## Usage
 
-The MCP server can be used by MCP clients (e.g., Claude Desktop) by connecting to the HTTP endpoint with authentication.
+The MCP server can be used by MCP clients (e.g., Claude Desktop) by connecting to the HTTP endpoint with API key authentication.
 
-Note: The client must handle the basic auth when making requests.
+Note: If API_KEY is set, the client must provide the X-API-Key header in requests.
 
 ## Environment Variables
 
 - `MOONRAKER_URL`: URL of the Moonraker instance (default: http://192.168.1.124)
+- `API_KEY`: Optional API key for securing the server (if set, clients must provide X-API-Key header)
 
 ## Ports
 

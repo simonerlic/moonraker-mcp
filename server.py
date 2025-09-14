@@ -18,11 +18,17 @@ def get_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
         raise HTTPException(status_code=401, detail="Invalid API Key")
     return x_api_key
 
-@mcp.tool(description="Greet a user by name with a welcome message from the MCP server")
+@mcp.tool(
+    name="greet_user",
+    description="Greet a user by name with a welcome message from the MCP server",
+)
 def greet(name: str, api_key: str = Depends(get_api_key)) -> str:
     return f"Hello, {name}! Welcome to our sample MCP server running on Heroku!"
 
-@mcp.tool(description="Get state information about the 3D printer")
+@mcp.tool(
+    name="get_printer_state",
+    description="Get state information about the 3D printer",
+)
 def get_printer_state(api_key: str = Depends(get_api_key)) -> dict:
     try:
         # send a GET request to the /printer/info endpoint of moonraker to get printer information
@@ -50,36 +56,54 @@ def get_printer_state(api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Activate an emergency stop on the 3D printer")
+@mcp.tool(
+    name="emergency_stop",
+    description="Activate an emergency stop on the 3D printer",
+)
 def emergency_stop(api_key: str = Depends(get_api_key)) -> dict:
     info = requests.post(mcp_server + "/printer/emergency_stop")
     return info.json()
 
-@mcp.tool(description="Activate an complete firmware restart of the 3D printer")
+@mcp.tool(
+    name="firmware_restart",
+    description="Activate an complete firmware restart of the 3D printer",
+)
 def firmware_restart(api_key: str = Depends(get_api_key)) -> dict:
     info = requests.post(mcp_server + "/printer/firmware_restart")
     return info.json()
 
 # pause the print
-@mcp.tool(description="Pause the current print job on the 3D printer")
+@mcp.tool(
+    name="pause_print",
+    description="Pause the current print job on the 3D printer",
+)
 def pause_print(api_key: str = Depends(get_api_key)) -> dict:
     info = requests.post(mcp_server + "/printer/print/pause")
     return info.json()
 
 # resume the print
-@mcp.tool(description="Resume the current print job on the 3D printer")
+@mcp.tool(
+    name="resume_print",
+    description="Resume the current print job on the 3D printer",
+)
 def resume_print(api_key: str = Depends(get_api_key)) -> dict:
     info = requests.post(mcp_server + "/printer/print/resume")
     return info.json()
 
 # cancel the print
-@mcp.tool(description="Cancel the current print job on the 3D printer")
+@mcp.tool(
+    name="cancel_print",
+    description="Cancel the current print job on the 3D printer",
+)
 def cancel_print(api_key: str = Depends(get_api_key)) -> dict:
     info = requests.post(mcp_server + "/printer/print/cancel")
     return info.json()
 
 # get print status
-@mcp.tool(description="Get the current print job status from the 3D printer")
+@mcp.tool(
+    name="get_print_status",
+    description="Get the current print job status from the 3D printer",
+)
 def get_print_status(api_key: str = Depends(get_api_key)) -> dict:
     try:
         response = requests.get(mcp_server + "/printer/objects/query?webhooks&print_stats&display_status")
@@ -104,7 +128,10 @@ def get_print_status(api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Analyze the 3D print via webcam snapshot using AI to describe the print and identify any issues. Provide a prompt to guide the analysis.")
+@mcp.tool(
+    name="analyze_print_via_webcam",
+    description="Analyze the 3D print via webcam snapshot using AI to describe the print and identify any issues. Provide a prompt to guide the analysis.",
+)
 def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -> dict:
     try:
         # Grab the snapshot from the webcam
@@ -130,7 +157,10 @@ def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -
     except Exception as e:
         return {"error": f"Unexpected error: {str(e)}"}
 
-@mcp.tool(description="Get the current status of the job queue")
+@mcp.tool(
+    name="get_job_queue_status",
+    description="Get the current status of the job queue",
+)
 def get_job_queue_status(api_key: str = Depends(get_api_key)) -> dict:
     try:
         response = requests.get(mcp_server + "/server/job_queue/status")
@@ -144,7 +174,10 @@ def get_job_queue_status(api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Enqueue one or more jobs to the job queue")
+@mcp.tool(
+    name="enqueue_job",
+    description="Enqueue one or more jobs to the job queue",
+)
 def enqueue_job(filenames: list[str], reset: bool = False, api_key: str = Depends(get_api_key)) -> dict:
     try:
         payload = {"filenames": filenames, "reset": reset}
@@ -159,7 +192,10 @@ def enqueue_job(filenames: list[str], reset: bool = False, api_key: str = Depend
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Remove one or more jobs from the job queue")
+@mcp.tool(
+    name="remove_job",
+    description="Remove one or more jobs from the job queue",
+)
 def remove_job(job_ids: Optional[list[str]] = None, all: bool = False, api_key: str = Depends(get_api_key)) -> dict:
     try:
         if all:
@@ -179,7 +215,10 @@ def remove_job(job_ids: Optional[list[str]] = None, all: bool = False, api_key: 
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Pause the job queue")
+@mcp.tool(
+    name="pause_job_queue",
+    description="Pause the job queue",
+)
 def pause_job_queue(api_key: str = Depends(get_api_key)) -> dict:
     try:
         response = requests.post(mcp_server + "/server/job_queue/pause")
@@ -193,7 +232,10 @@ def pause_job_queue(api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Start the job queue")
+@mcp.tool(
+    name="start_job_queue",
+    description="Start the job queue",
+)
 def start_job_queue(api_key: str = Depends(get_api_key)) -> dict:
     try:
         response = requests.post(mcp_server + "/server/job_queue/start")
@@ -207,7 +249,10 @@ def start_job_queue(api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Jump a job to the front of the queue")
+@mcp.tool(
+    name="jump_job_queue",
+    description="Jump a job to the front of the queue",
+)
 def jump_job_queue(job_id: str, api_key: str = Depends(get_api_key)) -> dict:
     try:
         payload = {"job_id": job_id}
@@ -222,7 +267,10 @@ def jump_job_queue(job_id: str, api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Set the nozzle temperature")
+@mcp.tool(
+    name="set_nozzle_temp",
+    description="Set the nozzle temperature",
+)
 def set_nozzle_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     try:
         script = f"M104 S{temp}"
@@ -238,7 +286,10 @@ def set_nozzle_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Set the bed temperature")
+@mcp.tool(
+    name="set_bed_temp",
+    description="Set the bed temperature",
+)
 def set_bed_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     try:
         script = f"M140 S{temp}"
@@ -254,7 +305,10 @@ def set_bed_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Set the enclosure temperature")
+@mcp.tool(
+    name="set_enclosure_temp",
+    description="Set the enclosure temperature",
+)
 def set_enclosure_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     try:
         script = f"M141 S{temp}"
@@ -270,7 +324,10 @@ def set_enclosure_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Get the current temperatures of nozzle, bed, and enclosure")
+@mcp.tool(
+    name="get_temps",
+    description="Get the current temperatures of nozzle, bed, and enclosure",
+)
 def get_temps(api_key: str = Depends(get_api_key)) -> dict:
     try:
         script = "M105"

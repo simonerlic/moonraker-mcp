@@ -51,47 +51,55 @@ def get_printer_state() -> dict:
         return {"error": f"Failed to parse response: {str(e)}"}
 
 @mcp.tool(
-    name="emergency_stop",
-    description="Activate an emergency stop on the 3D printer",
+    name="restart_printer",
+    description="Restart or stop the 3D printer. Action options: 'emergency_stop', 'firmware_restart'",
 )
-def emergency_stop() -> dict:
-    info = requests.post(mcp_server + "/printer/emergency_stop")
-    return info.json()
+def restart_printer(action: str) -> dict:
+    try:
+        # Map action to appropriate endpoint
+        endpoints = {
+            "emergency_stop": "/printer/emergency_stop",
+            "firmware_restart": "/printer/firmware_restart"
+        }
+
+        if action not in endpoints:
+            return {"error": f"Invalid action '{action}'. Valid options: {list(endpoints.keys())}"}
+
+        response = requests.post(mcp_server + endpoints[action])
+        response.raise_for_status()
+        data = response.json()
+
+        return {"status": f"Printer {action} command executed", "result": data}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
 
 @mcp.tool(
-    name="firmware_restart",
-    description="Activate an complete firmware restart of the 3D printer",
+    name="control_print",
+    description="Control the current print job. Action options: 'pause', 'resume', 'cancel'",
 )
-def firmware_restart() -> dict:
-    info = requests.post(mcp_server + "/printer/firmware_restart")
-    return info.json()
+def control_print(action: str) -> dict:
+    try:
+        # Map action to appropriate endpoint
+        endpoints = {
+            "pause": "/printer/print/pause",
+            "resume": "/printer/print/resume",
+            "cancel": "/printer/print/cancel"
+        }
 
-# pause the print
-@mcp.tool(
-    name="pause_print",
-    description="Pause the current print job on the 3D printer",
-)
-def pause_print() -> dict:
-    info = requests.post(mcp_server + "/printer/print/pause")
-    return info.json()
+        if action not in endpoints:
+            return {"error": f"Invalid action '{action}'. Valid options: {list(endpoints.keys())}"}
 
-# resume the print
-@mcp.tool(
-    name="resume_print",
-    description="Resume the current print job on the 3D printer",
-)
-def resume_print() -> dict:
-    info = requests.post(mcp_server + "/printer/print/resume")
-    return info.json()
+        response = requests.post(mcp_server + endpoints[action])
+        response.raise_for_status()
+        data = response.json()
 
-# cancel the print
-@mcp.tool(
-    name="cancel_print",
-    description="Cancel the current print job on the 3D printer",
-)
-def cancel_print() -> dict:
-    info = requests.post(mcp_server + "/printer/print/cancel")
-    return info.json()
+        return {"status": f"Print {action} command executed", "result": data}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
 
 # get print status
 @mcp.tool(
@@ -210,109 +218,69 @@ def remove_job(job_ids: Optional[list[str]] = None, all: bool = False) -> dict:
         return {"error": f"Failed to parse response: {str(e)}"}
 
 @mcp.tool(
-    name="pause_job_queue",
-    description="Pause the job queue",
+    name="control_job_queue",
+    description="Control the job queue. Action options: 'pause', 'start', 'jump'. For 'jump' action, job_id is required.",
 )
-def pause_job_queue() -> dict:
+def control_job_queue(action: str, job_id: Optional[str] = None) -> dict:
     try:
-        response = requests.post(mcp_server + "/server/job_queue/pause")
+        # Map action to appropriate endpoint
+        endpoints = {
+            "pause": "/server/job_queue/pause",
+            "start": "/server/job_queue/start",
+            "jump": "/server/job_queue/jump"
+        }
+
+        if action not in endpoints:
+            return {"error": f"Invalid action '{action}'. Valid options: {list(endpoints.keys())}"}
+
+        if action == "jump" and not job_id:
+            return {"error": "job_id is required for 'jump' action"}
+
+        # Prepare payload
+        payload = None
+        if action == "jump":
+            payload = {"job_id": job_id}
+
+        response = requests.post(mcp_server + endpoints[action], json=payload if payload else None)
         response.raise_for_status()
         data = response.json()
         if 'result' not in data:
             return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
-        return data['result']
+
+        status_msg = f"Job queue {action} command executed"
+        if action == "jump":
+            status_msg += f" for job {job_id}"
+
+        return {"status": status_msg, "result": data['result']}
     except requests.exceptions.RequestException as e:
         return {"error": f"Failed to connect to Moonraker: {str(e)}"}
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
 @mcp.tool(
-    name="start_job_queue",
-    description="Start the job queue",
+    name="set_temperature",
+    description="Set temperature for nozzle, bed, or enclosure. Component options: 'nozzle', 'bed', 'enclosure'",
 )
-def start_job_queue() -> dict:
+def set_temperature(component: str, temp: float) -> dict:
     try:
-        response = requests.post(mcp_server + "/server/job_queue/start")
-        response.raise_for_status()
-        data = response.json()
-        if 'result' not in data:
-            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
-        return data['result']
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
-    except (KeyError, ValueError) as e:
-        return {"error": f"Failed to parse response: {str(e)}"}
+        # Map component to appropriate G-code command
+        gcode_commands = {
+            "nozzle": f"M104 S{temp}",
+            "bed": f"M140 S{temp}",
+            "enclosure": f"M141 S{temp}"
+        }
 
-@mcp.tool(
-    name="jump_job_queue",
-    description="Jump a job to the front of the queue",
-)
-def jump_job_queue(job_id: str) -> dict:
-    try:
-        payload = {"job_id": job_id}
-        response = requests.post(mcp_server + "/server/job_queue/jump", json=payload)
-        response.raise_for_status()
-        data = response.json()
-        if 'result' not in data:
-            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
-        return data['result']
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
-    except (KeyError, ValueError) as e:
-        return {"error": f"Failed to parse response: {str(e)}"}
+        if component not in gcode_commands:
+            return {"error": f"Invalid component '{component}'. Valid options: {list(gcode_commands.keys())}"}
 
-@mcp.tool(
-    name="set_nozzle_temp",
-    description="Set the nozzle temperature",
-)
-def set_nozzle_temp(temp: float) -> dict:
-    try:
-        script = f"M104 S{temp}"
+        script = gcode_commands[component]
         payload = {"script": script}
         response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
         response.raise_for_status()
         data = response.json()
         if 'result' not in data:
             return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
-        return {"status": "Temperature set", "script": script, "result": data['result']}
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
-    except (KeyError, ValueError) as e:
-        return {"error": f"Failed to parse response: {str(e)}"}
-
-@mcp.tool(
-    name="set_bed_temp",
-    description="Set the bed temperature",
-)
-def set_bed_temp(temp: float) -> dict:
-    try:
-        script = f"M140 S{temp}"
-        payload = {"script": script}
-        response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
-        response.raise_for_status()
-        data = response.json()
-        if 'result' not in data:
-            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
-        return {"status": "Temperature set", "script": script, "result": data['result']}
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
-    except (KeyError, ValueError) as e:
-        return {"error": f"Failed to parse response: {str(e)}"}
-
-@mcp.tool(
-    name="set_enclosure_temp",
-    description="Set the enclosure temperature",
-)
-def set_enclosure_temp(temp: float) -> dict:
-    try:
-        script = f"M141 S{temp}"
-        payload = {"script": script}
-        response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
-        response.raise_for_status()
-        data = response.json()
-        if 'result' not in data:
-            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
-        return {"status": "Temperature set", "script": script, "result": data['result']}
+        return {"status": f"{component.title()} temperature set to {temp}°C", "script": script, "result": data['result']}
     except requests.exceptions.RequestException as e:
         return {"error": f"Failed to connect to Moonraker: {str(e)}"}
     except (KeyError, ValueError) as e:

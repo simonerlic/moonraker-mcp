@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import base64
-from fastapi import HTTPException, Depends, Header
 from fastmcp import FastMCP
 import requests
 from google.generativeai.client import configure
@@ -12,24 +11,20 @@ mcp_server = os.getenv("MOONRAKER_URL", "http://192.168.1.124")
 
 mcp = FastMCP("Moonraker MCP Server")
 
-def get_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
-    api_key = os.getenv("API_KEY")
-    if api_key and (not x_api_key or x_api_key != api_key):
-        raise HTTPException(status_code=401, detail="Invalid API Key")
-    return x_api_key
+
 
 @mcp.tool(
     name="greet_user",
     description="Greet a user by name with a welcome message from the MCP server",
 )
-def greet(name: str, api_key: str = Depends(get_api_key)) -> str:
+def greet(name: str) -> str:
     return f"Hello, {name}! Welcome to our sample MCP server running on Heroku!"
 
 @mcp.tool(
     name="get_printer_state",
     description="Get state information about the 3D printer",
 )
-def get_printer_state(api_key: str = Depends(get_api_key)) -> dict:
+def get_printer_state() -> dict:
     try:
         # send a GET request to the /printer/info endpoint of moonraker to get printer information
         response = requests.get(mcp_server + "/printer/info")
@@ -60,7 +55,7 @@ def get_printer_state(api_key: str = Depends(get_api_key)) -> dict:
     name="emergency_stop",
     description="Activate an emergency stop on the 3D printer",
 )
-def emergency_stop(api_key: str = Depends(get_api_key)) -> dict:
+def emergency_stop() -> dict:
     info = requests.post(mcp_server + "/printer/emergency_stop")
     return info.json()
 
@@ -68,7 +63,7 @@ def emergency_stop(api_key: str = Depends(get_api_key)) -> dict:
     name="firmware_restart",
     description="Activate an complete firmware restart of the 3D printer",
 )
-def firmware_restart(api_key: str = Depends(get_api_key)) -> dict:
+def firmware_restart() -> dict:
     info = requests.post(mcp_server + "/printer/firmware_restart")
     return info.json()
 
@@ -77,7 +72,7 @@ def firmware_restart(api_key: str = Depends(get_api_key)) -> dict:
     name="pause_print",
     description="Pause the current print job on the 3D printer",
 )
-def pause_print(api_key: str = Depends(get_api_key)) -> dict:
+def pause_print() -> dict:
     info = requests.post(mcp_server + "/printer/print/pause")
     return info.json()
 
@@ -86,7 +81,7 @@ def pause_print(api_key: str = Depends(get_api_key)) -> dict:
     name="resume_print",
     description="Resume the current print job on the 3D printer",
 )
-def resume_print(api_key: str = Depends(get_api_key)) -> dict:
+def resume_print() -> dict:
     info = requests.post(mcp_server + "/printer/print/resume")
     return info.json()
 
@@ -95,7 +90,7 @@ def resume_print(api_key: str = Depends(get_api_key)) -> dict:
     name="cancel_print",
     description="Cancel the current print job on the 3D printer",
 )
-def cancel_print(api_key: str = Depends(get_api_key)) -> dict:
+def cancel_print() -> dict:
     info = requests.post(mcp_server + "/printer/print/cancel")
     return info.json()
 
@@ -104,7 +99,7 @@ def cancel_print(api_key: str = Depends(get_api_key)) -> dict:
     name="get_print_status",
     description="Get the current print job status from the 3D printer",
 )
-def get_print_status(api_key: str = Depends(get_api_key)) -> dict:
+def get_print_status() -> dict:
     try:
         response = requests.get(mcp_server + "/printer/objects/query?webhooks&print_stats&display_status")
         response.raise_for_status()  # Raises an exception for bad status codes
@@ -132,7 +127,7 @@ def get_print_status(api_key: str = Depends(get_api_key)) -> dict:
     name="analyze_print_via_webcam",
     description="Analyze the 3D print via webcam snapshot using AI to describe the print and identify any issues. Provide a prompt to guide the analysis.",
 )
-def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -> dict:
+def analyze_print_via_webcam(prompt: str) -> dict:
     try:
         # Grab the snapshot from the webcam
         snapshot_url = mcp_server + "/webcam/?action=snapshot"
@@ -161,7 +156,7 @@ def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -
     name="get_job_queue_status",
     description="Get the current status of the job queue",
 )
-def get_job_queue_status(api_key: str = Depends(get_api_key)) -> dict:
+def get_job_queue_status() -> dict:
     try:
         response = requests.get(mcp_server + "/server/job_queue/status")
         response.raise_for_status()
@@ -178,7 +173,7 @@ def get_job_queue_status(api_key: str = Depends(get_api_key)) -> dict:
     name="enqueue_job",
     description="Enqueue one or more jobs to the job queue",
 )
-def enqueue_job(filenames: list[str], reset: bool = False, api_key: str = Depends(get_api_key)) -> dict:
+def enqueue_job(filenames: list[str], reset: bool = False) -> dict:
     try:
         payload = {"filenames": filenames, "reset": reset}
         response = requests.post(mcp_server + "/server/job_queue/job", json=payload)
@@ -196,7 +191,7 @@ def enqueue_job(filenames: list[str], reset: bool = False, api_key: str = Depend
     name="remove_job",
     description="Remove one or more jobs from the job queue",
 )
-def remove_job(job_ids: Optional[list[str]] = None, all: bool = False, api_key: str = Depends(get_api_key)) -> dict:
+def remove_job(job_ids: Optional[list[str]] = None, all: bool = False) -> dict:
     try:
         if all:
             payload = {"all": True}
@@ -219,7 +214,7 @@ def remove_job(job_ids: Optional[list[str]] = None, all: bool = False, api_key: 
     name="pause_job_queue",
     description="Pause the job queue",
 )
-def pause_job_queue(api_key: str = Depends(get_api_key)) -> dict:
+def pause_job_queue() -> dict:
     try:
         response = requests.post(mcp_server + "/server/job_queue/pause")
         response.raise_for_status()
@@ -236,7 +231,7 @@ def pause_job_queue(api_key: str = Depends(get_api_key)) -> dict:
     name="start_job_queue",
     description="Start the job queue",
 )
-def start_job_queue(api_key: str = Depends(get_api_key)) -> dict:
+def start_job_queue() -> dict:
     try:
         response = requests.post(mcp_server + "/server/job_queue/start")
         response.raise_for_status()
@@ -253,7 +248,7 @@ def start_job_queue(api_key: str = Depends(get_api_key)) -> dict:
     name="jump_job_queue",
     description="Jump a job to the front of the queue",
 )
-def jump_job_queue(job_id: str, api_key: str = Depends(get_api_key)) -> dict:
+def jump_job_queue(job_id: str) -> dict:
     try:
         payload = {"job_id": job_id}
         response = requests.post(mcp_server + "/server/job_queue/jump", json=payload)
@@ -271,7 +266,7 @@ def jump_job_queue(job_id: str, api_key: str = Depends(get_api_key)) -> dict:
     name="set_nozzle_temp",
     description="Set the nozzle temperature",
 )
-def set_nozzle_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
+def set_nozzle_temp(temp: float) -> dict:
     try:
         script = f"M104 S{temp}"
         payload = {"script": script}
@@ -290,7 +285,7 @@ def set_nozzle_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     name="set_bed_temp",
     description="Set the bed temperature",
 )
-def set_bed_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
+def set_bed_temp(temp: float) -> dict:
     try:
         script = f"M140 S{temp}"
         payload = {"script": script}
@@ -309,7 +304,7 @@ def set_bed_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
     name="set_enclosure_temp",
     description="Set the enclosure temperature",
 )
-def set_enclosure_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
+def set_enclosure_temp(temp: float) -> dict:
     try:
         script = f"M141 S{temp}"
         payload = {"script": script}
@@ -328,7 +323,7 @@ def set_enclosure_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict
     name="get_temps",
     description="Get the current temperatures of nozzle, bed, and enclosure",
 )
-def get_temps(api_key: str = Depends(get_api_key)) -> dict:
+def get_temps() -> dict:
     try:
         script = "M105"
         payload = {"script": script}

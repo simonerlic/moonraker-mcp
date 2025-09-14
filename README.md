@@ -41,7 +41,7 @@ This is a Model Context Protocol (MCP) server that interfaces with a Moonraker i
 
 ## Usage
 
-The MCP server can be used by MCP clients (e.g., Claude Desktop) by connecting to the HTTP endpoint with API key authentication.
+The MCP server can be used by MCP clients (e.g., Poke) by connecting to the HTTP endpoint with API key authentication.
 
 Note: If API_KEY is set, the client must provide the X-API-Key header in requests.
 
@@ -49,10 +49,6 @@ Note: If API_KEY is set, the client must provide the X-API-Key header in request
 
 - `MOONRAKER_URL`: URL of the Moonraker instance (default: http://192.168.1.124)
 - `API_KEY`: Optional API key for securing the server (if set, clients must provide X-API-Key header)
-
-## Ports
-
-- 80: nginx reverse proxy (secured)
 
 ## Stopping
 

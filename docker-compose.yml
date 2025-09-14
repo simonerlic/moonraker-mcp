@@ -3,10 +3,9 @@ services:
         build: .
         ports:
             - "8000:8000"
-        environment:
-            - MOONRAKER_URL=${MOONRAKER_URL:-http://192.168.1.124}
-            - API_KEY=${API_KEY:-your_api_key_here}
-            - GOOGLE_API_KEY=${GOOGLE_API_KEY:-your_google_api_key_here}
+        env_file:
+            - path: ./.env
+              required: true
         restart: unless-stopped
         networks:
             - mcp-network

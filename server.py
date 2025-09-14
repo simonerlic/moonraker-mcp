@@ -4,6 +4,7 @@ import base64
 from fastapi import HTTPException, Depends, Header
 from fastmcp import FastMCP
 import requests
+import google.generativeai as genai
 
 mcp_server = os.getenv("MOONRAKER_URL", "http://192.168.1.124")
 
@@ -101,26 +102,26 @@ def get_print_status(api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
-@mcp.tool(description="Grab a snapshot from the webcam and return it as a base64-encoded image")
-def get_webcam_snapshot(api_key: str = Depends(get_api_key)) -> dict:
+@mcp.tool(description="Analyze the 3D print via webcam snapshot using AI to describe the print and identify any issues. Provide a prompt to guide the analysis.")
+def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -> dict:
     try:
         # Grab the snapshot from the webcam
         snapshot_url = mcp_server + "/webcam/?action=snapshot"
         response = requests.get(snapshot_url)
         response.raise_for_status()
 
-        # Get content type and encode to base64
-        content_type = response.headers.get('Content-Type')
+        # Encode image to base64
         image_data = base64.b64encode(response.content).decode('utf-8')
 
+        # Configure Google Generative AI
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel('models/gemma-3-27b-it')
+
+        # Generate content with prompt and image
+        ai_response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": image_data}])
+
         return {
-            "content": [
-                {
-                    "type": "image",
-                    "data": image_data,
-                    "mimeType": "image/jpeg"
-                }
-            ]
+            "description": ai_response.text
         }
     except requests.exceptions.RequestException as e:
         return {"error": f"Failed to fetch snapshot: {str(e)}"}

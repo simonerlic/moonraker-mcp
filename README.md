@@ -16,6 +16,10 @@ This is a Model Context Protocol (MCP) server that interfaces with a Moonraker i
 - Pause the job queue
 - Start the job queue
 - Jump a job to the front of the queue
+- Set nozzle temperature
+- Set bed temperature
+- Set enclosure temperature
+- Get current temperatures
 
 ## Prerequisites
 

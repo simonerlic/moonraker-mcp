@@ -4,7 +4,8 @@ import base64
 from fastapi import HTTPException, Depends, Header
 from fastmcp import FastMCP
 import requests
-import google.generativeai as genai
+from google.generativeai.client import configure
+from google.generativeai.generative_models import GenerativeModel
 from typing import Optional
 
 mcp_server = os.getenv("MOONRAKER_URL", "http://192.168.1.124")
@@ -115,8 +116,8 @@ def analyze_print_via_webcam(prompt: str, api_key: str = Depends(get_api_key)) -
         image_data = base64.b64encode(response.content).decode('utf-8')
 
         # Configure Google Generative AI
-        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        model = genai.GenerativeModel('models/gemma-3-27b-it')
+        configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = GenerativeModel('models/gemma-3-27b-it')
 
         # Generate content with prompt and image
         ai_response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": image_data}])
@@ -221,6 +222,69 @@ def jump_job_queue(job_id: str, api_key: str = Depends(get_api_key)) -> dict:
     except (KeyError, ValueError) as e:
         return {"error": f"Failed to parse response: {str(e)}"}
 
+@mcp.tool(description="Set the nozzle temperature")
+def set_nozzle_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        script = f"M104 S{temp}"
+        payload = {"script": script}
+        response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return {"status": "Temperature set", "script": script, "result": data['result']}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Set the bed temperature")
+def set_bed_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        script = f"M140 S{temp}"
+        payload = {"script": script}
+        response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return {"status": "Temperature set", "script": script, "result": data['result']}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Set the enclosure temperature")
+def set_enclosure_temp(temp: float, api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        script = f"M141 S{temp}"
+        payload = {"script": script}
+        response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return {"status": "Temperature set", "script": script, "result": data['result']}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
+
+@mcp.tool(description="Get the current temperatures of nozzle, bed, and enclosure")
+def get_temps(api_key: str = Depends(get_api_key)) -> dict:
+    try:
+        script = "M105"
+        payload = {"script": script}
+        response = requests.post(mcp_server + "/printer/gcode/script", json=payload)
+        response.raise_for_status()
+        data = response.json()
+        if 'result' not in data:
+            return {"error": "Invalid response structure from Moonraker API", "raw_response": data}
+        return {"temperatures": data['result'], "script": script}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Failed to connect to Moonraker: {str(e)}"}
+    except (KeyError, ValueError) as e:
+        return {"error": f"Failed to parse response: {str(e)}"}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
